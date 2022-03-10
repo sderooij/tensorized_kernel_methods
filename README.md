@@ -8,7 +8,10 @@ Efficient implementation of tensorized kernel methods for different hardware.
 `pip install torch`
 
 ## Jax
-`pip install jax`
+`pip install --upgrade "jax[cpu]"`
+
+`pip install jax` && pip install jaxlib
+
 
 ## TKR
 `pip install -e ".[dev]"`

@@ -3,11 +3,14 @@ import jax.numpy as jnp
 def polynomial(
     X,
     M,
-    lengthscale,
 ):
-    return jnp.power(X, list(range(M)))
+    return jnp.power(X[:, None], jnp.arange(M))
 
-def fourier(): 
+def fourier(
+    X,
+    M,
+    lengthscale,
+): 
     """
     function Mati = features(X,M,lengthscale)   # fourier features, but can be any polynomials is easiest
     X = (X+1/2)/2;

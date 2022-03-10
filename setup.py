@@ -2,11 +2,13 @@ from setuptools import setup, find_packages
 
 base_requirements = [
     'torch',
-    'jax',
+    'jax[cpu]',
+    # 'jaxlib',
 ]
 
 dev_requirements = [
     'jupyterlab',
+    'pandas',
 ]
 
 setup(
