@@ -86,3 +86,19 @@ def fit( # TODO: type hinting
         Matd *= Mati @ W[d]
 
     return W, loss, error
+
+
+def predict(
+    X, 
+    W, 
+    # hyperparameters,
+):
+    N, D = X.shape
+    M = W[0].shape[0]
+    score = jnp.ones((N,1))
+    for d in range(D):
+        score *= polynomial(X[:,d], M) @ W[d]
+
+    score = jnp.sum(score,1)
+
+    return score
