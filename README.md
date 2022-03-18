@@ -4,8 +4,10 @@ Efficient implementation of tensorized kernel methods for different hardware.
 
 # Installation Guide
 
+<!--
 ## PyTorch
 `pip install torch`
+-->
 
 ## Jax
 https://github.com/google/jax/blob/main/README.md#pip-installation-gpu-cuda
