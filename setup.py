@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 base_requirements = [
-    'torch',
+    # 'torch',
     'jax[cpu]',
     # 'jaxlib',
 ]
