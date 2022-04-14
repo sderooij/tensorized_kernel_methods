@@ -1,5 +1,9 @@
 import jax.numpy as jnp
+from jax import jit
+from jax import vmap
 
+
+# @jit
 def dotkron(a, b):
     """
     Row-wise kronecker product
@@ -16,4 +20,9 @@ def dotkron(a, b):
 
     # TODO jax improvement for loops
     # TODO does python provide efficient kron() for vectors
-    return jnp.vstack([jnp.kron(a[k, :], b[k, :]) for k in range(b.shape[0])])
+    return jnp.vstack([jnp.kron(a[k, :], b[k, :]) for k in jnp.arange(b.shape[0])])
+
+
+@jit
+def vmap_dotkron(a,b):
+    return vmap(jnp.kron)(a, b)

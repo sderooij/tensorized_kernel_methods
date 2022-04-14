@@ -1,10 +1,12 @@
 import jax.numpy as jnp
 
+
 def polynomial(
     X,
     M,
 ):
     return jnp.power(X[:, None], jnp.arange(M))
+
 
 def fourier(
     X,
