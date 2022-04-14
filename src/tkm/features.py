@@ -1,11 +1,36 @@
+from functools import partial
 import jax.numpy as jnp
+from jax import vmap, jit
 
 
+# @partial(jit, static_argnums=(1,))
+# @jit
 def polynomial(
     X,
     M,
 ):
     return jnp.power(X[:, None], jnp.arange(M))
+
+
+def polynomial_(
+    X,
+    ar_M,
+):
+    return jnp.power(X[:, None], ar_M)
+
+
+def polynomial_vmap(
+    X,
+    rangeM,
+):
+    return vmap(jnp.power, (None,0), (-1))(X, rangeM)
+
+
+def compile_feature_map(
+    *args,
+    **kwargs,
+):
+    return jit(partial(polynomial, *args, **kwargs))
 
 
 def fourier(
