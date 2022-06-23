@@ -4,7 +4,7 @@ from jax import random
 # from jax.scipy.linalg import solve      # TODO check difference between the two
 # from jax.scipy.linalg import kharti_rao
 
-from tkm.features import polynomial, compile_feature_map
+from tkm.features import polynomial, compile_feature_map, fourier
 from tkm.utils import dotkron, vmap_dotkron
 from jax import jit,vmap
 
@@ -29,7 +29,7 @@ def init(
     # intializing with the constant cores already contracted
     for d in range(D-1, -1, -1):
         # W[d] = 
-        W.at[d].divide(jnp.linalg.norm(W[d]))                  # TODO: check if this is necessary
+        W = W.at[d].divide(jnp.linalg.norm(W[d]))                  # TODO: check if this is necessary
         reg *= (W[d].T @ W[d])           # reg has shape R * R
         Mati = polynomial(X[:,d])                       # TODO implement features function
         Matd *= Mati @ W[d]            # Matd has shape N * R, contraction of phi_x_d * w_d
@@ -45,9 +45,10 @@ def fit( # TODO: type hinting
     M: int = 8,
     R: int = 10,
     l: float = 1e-5, # TODO: default value
-    # lengthscale, # TODO: default value
-    numberSweeps: int = 2, # TODO: default value
-
+    lengthscale: float = 0.5, # TODO: default value
+    numberSweeps: int = 10, # TODO: default value
+    feature_map=polynomial,
+    W = None,
 ):
     """
     input
@@ -68,11 +69,11 @@ def fit( # TODO: type hinting
         error: list of errors per ALS step
     """
 
-    polynomial = compile_feature_map(M=M)
+    features = compile_feature_map(feature_map, M=M, lengthscale=lengthscale)
     # polynomial_compiled = jit(partial(polynomial, M=M))
 
     N,D = X.shape #jnp.shape(X)
-    W = random.normal(key, shape=(D,M,R))
+    W = random.normal(key, shape=(D,M,R)) if W is None else W
     # list(range(D)) # TODO: JAX
     Matd = jnp.ones((N,R))
     reg = jnp.ones((R,R))
@@ -80,21 +81,20 @@ def fit( # TODO: type hinting
     # initializaiton of cores
     # intializing with the constant cores already contracted
     for d in range(D-1, -1, -1):
-        # W[d] = 
-        W.at[d].divide(jnp.linalg.norm(W[d]))                  # TODO: check if this is necessary
+        W = W.at[d].divide(jnp.linalg.norm(W[d])) if W is None else W       # TODO: check if this is necessary
         reg *= jnp.dot(W[d].T, W[d])           # reg has shape R * R
-        Mati = polynomial(X[:,d])
+        Mati = features(X[:,d])
         Matd *= jnp.dot(Mati, W[d])            # Matd has shape N * R, contraction of phi_x_d * w_d
 
     # D,M,R = W.shape
     # itemax = numberSweeps * D # numberSweeps *(2*(D-1))+1;    # not necesarry in python
-    # loss = []
+    loss = []
     # error = []
-
+    i=0
     for s in range(numberSweeps):
         for d in range(D):
             # compute phi(x_d)
-            Mati = polynomial(X[:,d])                               
+            Mati = features(X[:,d])                               
             # undoing the d-th element from Matd (contraction of all cores)
             Matd /= jnp.dot(Mati, W[d])                                      
             C = vmap_dotkron(Mati,Matd)                                  # N by M_hat*R
@@ -104,23 +104,20 @@ def fit( # TODO: type hinting
                 (jnp.dot(C.T, C) + regularization), 
                 jnp.dot(C.T, y)
             )
-            # print(loss(C,x,y,regularization))
+            loss.append(float(loss_function(C,x,y,regularization)[0][0]))
             # print(error(C,x,y))
             # loss = jnp.linalg.norm(C @ x - y)**2 + x.T @ regularization @ x )  #TODO check if **2 is necessary (can it be done in function call of norm)
             # error =  jnp.mean(jnp.sign(C @ x) != y) # TODO not equal elementwise   # classification; for regression mean(((C*x)-y).^2)
-            W.at[d].set( x.reshape((M,R)) )
+            W = W.at[d].set( x.reshape((M,R)) )
             reg *= jnp.dot(W[d].T, W[d])
             Matd *= jnp.dot(Mati, W[d])
-
-    return W #, loss, error
+            i+=1
+    return W, loss #error
 
 
 @jit
-def loss(C,x,y,regularization):
-    return jnp.linalg.norm(
-        (jnp.dot(C,x) - y)**2 + 
-        x.T.dot(regularization).dot(x)
-    )
+def loss_function(C,x,y,regularization):
+    return jnp.power(jnp.linalg.norm(jnp.dot(C,x) - y),2) + x.T.dot(regularization).dot(x)
 
 
 @jit
@@ -132,15 +129,17 @@ def predict(
     X, 
     W, 
     # hyperparameters,
+    feature_map=polynomial,
+    *args,**kwargs,
 ):
-    
+    features = compile_feature_map(feature_map, *args,**kwargs)
     N, D = X.shape
     M = W[0].shape[0]
     # polynomial = compile_feature_map(M=M)
     score = jnp.ones((N,1))
     for d in range(D): #TODO JAX fori
         score *= jnp.dot(
-            polynomial(X[:,d], M) , 
+            features(X[:,d]) , 
             W[d]
         )
     score = jnp.sum(score, 1)
