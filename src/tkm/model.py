@@ -94,8 +94,8 @@ def fit( # TODO: type hinting
     # loss = []
     # error = []
     # i=0
-    for s in range(numberSweeps):
-        for d in range(D):
+    for s in range(numberSweeps): #TODO fori jax loop
+        for d in range(D): #TODO fori jax loop
             # compute phi(x_d)
             Mati = features(X[:,d])                               
             # undoing the d-th element from Matd (contraction of all cores)
