@@ -37,7 +37,6 @@ def init(
     return W, reg, Matd
 
 
-
 def fit( # TODO: type hinting
     key,
     X,
@@ -48,6 +47,8 @@ def fit( # TODO: type hinting
     lengthscale: float = 0.5, # TODO: default value
     numberSweeps: int = 10, # TODO: default value
     feature_map=polynomial,
+    # feature_str = "polynomial",
+    # feature_idx: int = 0,
     W = None,
 ):
     """
@@ -69,6 +70,8 @@ def fit( # TODO: type hinting
         error: list of errors per ALS step
     """
 
+    # feature_map = feature_list[feature_idx]
+
     features = compile_feature_map(feature_map, M=M, lengthscale=lengthscale)
     # polynomial_compiled = jit(partial(polynomial, M=M))
 
@@ -88,9 +91,9 @@ def fit( # TODO: type hinting
 
     # D,M,R = W.shape
     # itemax = numberSweeps * D # numberSweeps *(2*(D-1))+1;    # not necesarry in python
-    loss = []
+    # loss = []
     # error = []
-    i=0
+    # i=0
     for s in range(numberSweeps):
         for d in range(D):
             # compute phi(x_d)
@@ -104,15 +107,15 @@ def fit( # TODO: type hinting
                 (jnp.dot(C.T, C) + regularization), 
                 jnp.dot(C.T, y)
             )
-            loss.append(float(loss_function(C,x,y,regularization)[0][0]))
+            # loss.append(float(loss_function(C,x,y,regularization)[0][0]))
             # print(error(C,x,y))
             # loss = jnp.linalg.norm(C @ x - y)**2 + x.T @ regularization @ x )  #TODO check if **2 is necessary (can it be done in function call of norm)
             # error =  jnp.mean(jnp.sign(C @ x) != y) # TODO not equal elementwise   # classification; for regression mean(((C*x)-y).^2)
             W = W.at[d].set( x.reshape((M,R)) )
             reg *= jnp.dot(W[d].T, W[d])
             Matd *= jnp.dot(Mati, W[d])
-            i+=1
-    return W, loss #error
+            # i+=1
+    return W #, loss #error
 
 
 @jit
@@ -150,12 +153,13 @@ def predict(
 def predict_vmap(
     X, 
     W, 
-    # hyperparameters,
+    feature_map=polynomial,
+    *args,**kwargs,
 ):
     
     M = W[0].shape[0]
-    poly = compile_feature_map(M=M)
+    features = compile_feature_map(feature_map, *args,**kwargs)
 
     return vmap(
-        lambda x,y :jnp.dot(poly(x),y), (1,0),
+        lambda x,y :jnp.dot(features(x),y), (1,0),
     )(X, W).prod(0).sum(1)
