@@ -8,27 +8,38 @@ Efficient implementation of tensorized kernel methods for different hardware.
 ## PyTorch
 `pip install torch`
 -->
+`pip install --upgrade pip`
+
+`pip install wheel`
 
 ## Jax
-https://github.com/google/jax/blob/main/README.md#pip-installation-gpu-cuda
 
+### CPU
 `pip install --upgrade "jax[cpu]"`
 
-`pip install jax` && pip install jaxlib
+<!--`pip install jax` && pip install jaxlib-->
+
+### GPU
+https://github.com/google/jax/blob/main/README.md#pip-installation-gpu-cuda
 
 `pip install "jax[cuda11_cudnn805]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html` --> !!! WARNING: jax 0.3.14 does not provide the extra 'cuda11_cudnn811' !!!
-
-### Profiling
-https://jax.readthedocs.io/en/latest/profiling.html?highlight=gpu#gpu-profiling
 
 ## TKR
 `pip install -e ".[dev]"`
 
 
-## Docker
+# Profiling with JAX
+https://jax.readthedocs.io/en/latest/profiling.html?highlight=gpu#gpu-profiling
+
+
+
+
+# Docker
 
 Build: `docker build -t jtsch/tkm . `
 
-Build and Push: `docker build -t jtsch/tkm . && docker push jtsch/hmsa-seg`
+Build and Push: `docker build -t jtsch/tkm . && docker push jtsch/tkm`
+
+Pull: `docker pull jtsch/tkm`
 
 Run with terminal: `docker run -it jtsch/tkm`

@@ -1,6 +1,9 @@
 from setuptools import setup, find_packages
 
 base_requirements = [
+]
+
+cpu_requirements = [
     'jax[cpu]',
 ]
 
@@ -21,6 +24,7 @@ setup(
     install_requires=base_requirements,
     extras_require={
         'dev': dev_requirements,
-        'gpu': dev_requirements + gpu_requirements,
+        'gpu': gpu_requirements,
+        'cpu': cpu_requirements,
     },
 )

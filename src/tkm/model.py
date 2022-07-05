@@ -157,7 +157,7 @@ def predict_vmap(
     *args,**kwargs,
 ):
     
-    M = W[0].shape[0]
+    # M = W[0].shape[0]
     features = compile_feature_map(feature_map, *args,**kwargs)
 
     return vmap(
