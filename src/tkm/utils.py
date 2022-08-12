@@ -26,3 +26,16 @@ def dotkron(a, b):
 @jit
 def vmap_dotkron(a,b):
     return vmap(jnp.kron)(a, b)
+
+
+def batched_dotkron(A,B,y,batch_size=10000, **kwargs):
+    N,DA = A.shape
+    _,DB = B.shape
+    CC = jnp.zeros((DA*DB,DA*DB))
+    Cy = jnp.zeros((DA*DB,1))
+    for n in range(0,N,batch_size):
+        idx = min(n+batch_size-1,N)
+        temp = vmap_dotkron(A[n:idx,:], B[n:idx,:]) # repmat(A(n:idx,:),1,DB)*kron(B(n:idx,:), ones(1, DA))
+        CC += temp.T @ temp
+        Cy += temp.T @ y[n:idx,:]
+    return CC, Cy
