@@ -15,7 +15,7 @@ def dotkron(a, b):
     # np.vstack([np.kron(a[:, k], b[:, k]) for k in range(b.shape[1])]).T
 
     # row-wise matlab
-    # y = repmat(L,1,c2).*kron(R, ones(1, c1));
+    # y = repmat(L,1,c2) .* kron(R, ones(1, c1));
     # TODO check if transpose of repmat for second term option is: repmat() .* repmat()' 
 
     # TODO jax improvement for loops
@@ -27,6 +27,10 @@ def dotkron(a, b):
 def vmap_dotkron(a,b):
     return vmap(jnp.kron)(a, b)
 
+
+def vmap_dotkron_new(a, b, y): # TODO: check y
+    temp = vmap_dotkron(a,b)
+    return temp.T @ temp, temp.T @ y
 
 def batched_dotkron(A,B,y,batch_size=10000, **kwargs):
     N,DA = A.shape

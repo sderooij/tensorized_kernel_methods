@@ -10,10 +10,16 @@ from tkm.utils import dotkron, vmap_dotkron, batched_dotkron
 from jax import jit,vmap
 # import jmp
 
+def dotkron(batch_size=None):
+    if batch_size is None:
+        return vmap_dotkron_new # TODO: should have the right return types
+    else:
+        return partial(batched_dotkron, batch_size=batch_size)
 
 class TensorizedKernelMachine(object):
     def __init__(
         self, 
+        dotkron = dotkron(batch_size=None)
         policy = None,
         **kwargs,
     ):
@@ -21,8 +27,12 @@ class TensorizedKernelMachine(object):
         # self.policy = policy if policy is not None else jmp.Policy(...)
         
         # This is equivalent to `jax.jit(partial(Experiment.forward, self))`.
+
+        self.dotkron = jit(dotkron)
+
         self.fit = jit(partial(self.fit, **kwargs))
         self.predict = jit(partial(self.predict_vmap, **kwargs))
+
 
 
     def fit(
@@ -91,9 +101,14 @@ class TensorizedKernelMachine(object):
                 Mati = features(X[:,d])                               
                 # undoing the d-th element from Matd (contraction of all cores)
                 Matd /= jnp.dot(Mati, W[d])                                      
+                
+                #TODO: reformat CC
                 C = vmap_dotkron(Mati,Matd)                                  # N by M_hat*R
+                
                 reg /= jnp.dot(W[d].T, W[d])                                    # regularization term
                 regularization = l * jnp.kron(reg, jnp.eye(M)) # TODO: this results in sparse matrix, check if multiplications with 0 need to be avoided
+                
+                #TODO: reformat cc
                 x = jnp.linalg.solve(                                   # solve systems of equations
                     (jnp.dot(C.T, C) + regularization), 
                     jnp.dot(C.T, y)
@@ -162,8 +177,8 @@ def error(C,x,y):
 
 
 class BatchedTKM(TensorizedKernelMachine):
-    def __init__(self, batch_size, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # def __init__(self, batch_size, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
 
     def fit(
         self,
