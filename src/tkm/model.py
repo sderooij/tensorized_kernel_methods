@@ -13,20 +13,20 @@ from jax import jit,vmap
 class TensorizedKernelMachine(object):
     def __init__(
         self, 
-        dotkron = get_dotkron(batch_size=None),
         features = polynomial,
         M: int = 8,
         R: int = 10,
         lengthscale: float = 0.5,  
+        dotkron = get_dotkron(batch_size=None),
         **kwargs,
     ):
         """
         Args:
-            dotkron: function used for rowwise kronnecker product
             features: kernel function for transforming input data
             M: M_hat degree of polynomials in one of the CP legs 
             R: rank
             lenghtscale: hyperparameters of fourierfeatures
+            get_dotkron: function used for rowwise kronnecker product
             batch_size: if is not None batched_dotkron will be used
         """
 
