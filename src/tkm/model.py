@@ -1,6 +1,8 @@
 from functools import partial
+
 import jax.numpy as jnp
 from jax import random
+from jax.lax import fori_loop
 # from jax.numpy.linalg import solve
 # from jax.scipy.linalg import solve      # TODO check difference between the two
 # from jax.scipy.linalg import kharti_rao
@@ -68,6 +70,9 @@ class TensorizedKernelMachine(object):
         W = random.normal(key, shape=(D,M,R)) if W is None else W
         Matd = jnp.ones((N,R))
         reg = jnp.ones((R,R))
+
+        self.fit_step = jit(partial(self.fit_step, X=X, y=y, l=l, M=M, R=R))
+        self.sweep = jit(partial(self.sweep, D=D))
         
         # initializaiton of cores
         # intializing with the constant cores already contracted
@@ -77,21 +82,29 @@ class TensorizedKernelMachine(object):
             Mati = self.features(X[:,d])
             Matd *= jnp.dot(Mati, W[d])            # Matd has shape N * R, contraction of phi_x_d * w_d
 
-        for s in range(numberSweeps): #TODO fori jax loop
-            for d in range(D): #TODO fori jax loop
-                Mati = self.features(X[:,d])     # compute phi(x_d)                          
-                Matd /= jnp.dot(Mati, W[d])     # undoing the d-th element from Matd (contraction of all cores)
-                CC, Cy = self.dotkron(Mati,Matd,y)                                  # N by M_hat*R
-                
-                reg /= jnp.dot(W[d].T, W[d])                                    # regularization term
-                regularization = l * jnp.kron(reg, jnp.eye(M)) # TODO: this results in sparse matrix, check if multiplications with 0 need to be avoided                
-                
-                x = jnp.linalg.solve((CC + regularization), Cy)         # solve systems of equation, least squares
-                W = W.at[d].set( x.reshape((M,R)) )
-                reg *= jnp.dot(W[d].T, W[d])
-                Matd *= jnp.dot(Mati, W[d])
+        (Mati, Matd, W, reg) = fori_loop(
+            0, numberSweeps, self.sweep, init_val=(Mati, Matd, W, reg))
         
         return W
+    
+    def sweep(self, i, value, D):
+        return fori_loop(0, D, self.fit_step, init_val=value)
+    
+    def fit_step(self, d, value, l, M, R, X, y):
+        (Mati, Matd, W, reg) = value # TODO: jit(partial()) this
+        Mati = self.features(X[:,d])     # compute phi(x_d)                          
+        Matd /= jnp.dot(Mati, W[d])     # undoing the d-th element from Matd (contraction of all cores)
+        CC, Cy = self.dotkron(Mati,Matd,y)                                  # N by M_hat*R
+        
+        reg /= jnp.dot(W[d].T, W[d])                                    # regularization term
+        regularization = l * jnp.kron(reg, jnp.eye(M)) # TODO: this results in sparse matrix, check if multiplications with 0 need to be avoided                
+        
+        x = jnp.linalg.solve((CC + regularization), Cy)         # solve systems of equation, least squares
+        W = W.at[d].set( x.reshape((M,R)) )
+        reg *= jnp.dot(W[d].T, W[d])
+        Matd *= jnp.dot(Mati, W[d])
+
+        return (Mati, Matd, W, reg)
 
     def predict(
         self,
