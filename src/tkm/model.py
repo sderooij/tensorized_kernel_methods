@@ -71,7 +71,7 @@ class TensorizedKernelMachine(object):
         
         # initializaiton of cores
         # intializing with the constant cores already contracted
-        for d in range(D-1, -1, -1):
+        for d in range(D-1, -1, -1): #TODO switch order
             W = W.at[d].divide(jnp.linalg.norm(W[d])) if W is None else W       # TODO: check if this is necessary
             reg *= jnp.dot(W[d].T, W[d])           # reg has shape R * R
             Mati = self.features(X[:,d])
@@ -86,7 +86,7 @@ class TensorizedKernelMachine(object):
                 reg /= jnp.dot(W[d].T, W[d])                                    # regularization term
                 regularization = l * jnp.kron(reg, jnp.eye(M)) # TODO: this results in sparse matrix, check if multiplications with 0 need to be avoided                
                 
-                x = jnp.linalg.solve((CC + regularization), Cy)         # solve systems of equation
+                x = jnp.linalg.solve((CC + regularization), Cy)         # solve systems of equation, least squares
                 W = W.at[d].set( x.reshape((M,R)) )
                 reg *= jnp.dot(W[d].T, W[d])
                 Matd *= jnp.dot(Mati, W[d])
