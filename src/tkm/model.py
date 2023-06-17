@@ -67,31 +67,45 @@ class TensorizedKernelMachine(object):
         """
 
         N,D = X.shape
-        W = random.normal(key, shape=(D,M,R)) if W is None else W
-        Matd = jnp.ones((N,R))
+        if W is None:
+            W = random.normal(key, shape=(D,M,R)) if W is None else W
+            W = fori_loop(0,D,self.normalize_w, init_val=W)
+    
         reg = jnp.ones((R,R))
+        self.init_reg = jit(partial(self.init_reg, W=W))
+        reg = fori_loop(0,D, self.init_reg, init_val=reg)
+        
+
+        self.init_matd = jit(partial(self.init_matd, W=W, X=X))
+        Matd = jnp.ones((N,R))
+        Matd = fori_loop(0, D, self.init_matd, init_val=Matd)
 
         self.fit_step = jit(partial(self.fit_step, X=X, y=y, l=l, M=M, R=R))
         self.sweep = jit(partial(self.sweep, D=D))
-        
-        # initializaiton of cores
-        # intializing with the constant cores already contracted
-        for d in range(D-1, -1, -1): #TODO switch order
-            W = W.at[d].divide(jnp.linalg.norm(W[d])) if W is None else W       # TODO: check if this is necessary
-            reg *= jnp.dot(W[d].T, W[d])           # reg has shape R * R
-            Mati = self.features(X[:,d])
-            Matd *= jnp.dot(Mati, W[d])            # Matd has shape N * R, contraction of phi_x_d * w_d
-
-        (Mati, Matd, W, reg) = fori_loop(
-            0, numberSweeps, self.sweep, init_val=(Mati, Matd, W, reg))
+            
+        (Matd, W, reg) = fori_loop(
+            0, numberSweeps, self.sweep, init_val=(Matd, W, reg)
+        )
         
         return W
+    
+    def normalize_w(self, d, W):
+        return W.at[d].divide(jnp.linalg.norm(W[d])) #  if W is None else W       # TODO: check if this is necessary
+
+    def init_reg(self, d, reg, W): # TODO: forloop is not necessary, should be able to do this with linalg
+        reg *= jnp.dot(W[d].T, W[d])           # reg has shape R * R    
+        return reg
+    
+    def init_matd(self, d, Matd, X, W):
+        Mati = self.features(X[:,d])
+        Matd *= jnp.dot(Mati, W[d])            # Matd has shape N * R, contraction of phi_x_d * w_d
+        return Matd
     
     def sweep(self, i, value, D):
         return fori_loop(0, D, self.fit_step, init_val=value)
     
     def fit_step(self, d, value, l, M, R, X, y):
-        (Mati, Matd, W, reg) = value # TODO: jit(partial()) this
+        (Matd, W, reg) = value # TODO: jit(partial()) this
         Mati = self.features(X[:,d])     # compute phi(x_d)                          
         Matd /= jnp.dot(Mati, W[d])     # undoing the d-th element from Matd (contraction of all cores)
         CC, Cy = self.dotkron(Mati,Matd,y)                                  # N by M_hat*R
@@ -104,7 +118,7 @@ class TensorizedKernelMachine(object):
         reg *= jnp.dot(W[d].T, W[d])
         Matd *= jnp.dot(Mati, W[d])
 
-        return (Mati, Matd, W, reg)
+        return (Matd, W, reg)
 
     def predict(
         self,
