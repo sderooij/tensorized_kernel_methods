@@ -69,8 +69,8 @@ class TensorizedKernelMachine(object):
         N,D = X.shape
         if W is None:
             W = random.normal(key, shape=(D,M,R)) if W is None else W
-            W = fori_loop(0,D,self.normalize_w, init_val=W)
-    
+            W /= jnp.linalg.norm(W, axis=(1,2), keepdims=True)
+        
         reg = jnp.ones((R,R))
         self.init_reg = jit(partial(self.init_reg, W=W))
         reg = fori_loop(0,D, self.init_reg, init_val=reg)
@@ -90,7 +90,7 @@ class TensorizedKernelMachine(object):
         return W
     
     def normalize_w(self, d, W):
-        return W.at[d].divide(jnp.linalg.norm(W[d])) #  if W is None else W       # TODO: check if this is necessary
+        return W.at[d].divide(jnp.linalg.norm(W[d])) # TODO: normalize along first dimension D
 
     def init_reg(self, d, reg, W): # TODO: forloop is not necessary, should be able to do this with linalg
         reg *= jnp.dot(W[d].T, W[d])           # reg has shape R * R    
