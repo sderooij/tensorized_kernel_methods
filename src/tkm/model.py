@@ -89,9 +89,6 @@ class TensorizedKernelMachine(object):
         
         return W
     
-    def normalize_w(self, d, W):
-        return W.at[d].divide(jnp.linalg.norm(W[d])) # TODO: normalize along first dimension D
-
     def init_reg(self, d, reg, W): # TODO: forloop is not necessary, should be able to do this with linalg
         reg *= jnp.dot(W[d].T, W[d])           # reg has shape R * R    
         return reg
