@@ -75,7 +75,7 @@ class TensorizedKernelMachine(object):
         self.init_reg = jit(partial(self.init_reg, W=W)) #TODO: check the memory footprint of partially filling W
         reg = fori_loop(0, D, self.init_reg, init_val=reg)
         
-        self.init_matd = jit(partial(self.init_matd, W=W, X=X)) #TODO: check the memory footprint of partially filling W
+        self.init_matd = jit(partial(self.init_matd, W=W, X=X)) #TODO: check the memory footprint of partially filling W and X
         Matd = jnp.ones((N,R))
         Matd = fori_loop(0, D, self.init_matd, init_val=Matd)
 
