@@ -24,6 +24,11 @@ https://github.com/google/jax/blob/main/README.md#pip-installation-gpu-cuda
 
 `pip install "jax[cuda11_cudnn805]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html` --> !!! WARNING: jax 0.3.14 does not provide the extra 'cuda11_cudnn811' !!!
 
+### Mac
+Jax on apple silicon: https://developer.apple.com/metal/jax/
+
+
+
 ## TKR
 `pip install -e ".[dev]"`
 
