@@ -12,8 +12,8 @@ gpu_requirements = [
 ]
 
 dev_requirements = [
-    f'jupyterlab>=3.0.0',
-    f'pandas>=1.2.0',
+    f'jupyterlab',
+    f'pandas',
 ]
 
 setup(
