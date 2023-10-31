@@ -4,16 +4,16 @@ base_requirements = [
 ]
 
 cpu_requirements = [
-    'jax[cpu]',
+    f'jax[cpu]',
 ]
 
 gpu_requirements = [
-    'jax[cuda11_cudnn805] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html',
+    f'jax[cuda11_cudnn805] @ https://storage.googleapis.com/jax-releases/jax_cuda_releases.html',
 ]
 
 dev_requirements = [
-    'jupyterlab',
-    'pandas',
+    f'jupyterlab>=3.0.0',
+    f'pandas>=1.2.0',
 ]
 
 setup(
