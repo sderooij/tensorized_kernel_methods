@@ -20,12 +20,12 @@ def dotkron(a, b):
 
     # TODO jax improvement for loops
     # TODO does python provide efficient kron() for vectors
-    return jnp.vstack([jnp.kron(a[k, :], b[k, :]) for k in jnp.arange(b.shape[0])])
+    return jnp.vstack([jnp.kron(b[k, :], a[k,:]) for k in jnp.arange(b.shape[0])])
 
 
 @jit
 def vmap_dotkron(a,b):
-    return vmap(jnp.kron)(a, b)
+    return vmap(jnp.kron)(b, a)
 
 
 def vmap_dotkron_contracted(a, b, y): # TODO: check y
