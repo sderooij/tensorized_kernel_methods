@@ -22,16 +22,17 @@ class TensorizedKernelMachine(object):
         l: float = 1e-5,
         numberSweeps: int = 10,
         key=random.PRNGKey(0),
-        W=None,
-        dotkron = get_dotkron(batch_size=None),
+        W_init=None,
+        batch_size=None,
+        # dotkron = get_dotkron(),
         **kwargs,
     ):
         """
         Args:
             features: kernel function for transforming input data
-            M: M_hat degree of polynomials in one of the CP legs 
+            M: M_hat number of basis funcitons in one of the CP legs 
             R: rank
-            lenghtscale: hyperparameters of fourierfeatures
+            lenghtscale: hyperparameter of fourier features
             get_dotkron: function used for rowwise kronnecker product
             batch_size: if is not None batched_dotkron will be used
             l: peanalty term of regularisation (denoted by lambda)
@@ -46,50 +47,13 @@ class TensorizedKernelMachine(object):
         self.l = l
         self.numberSweeps = numberSweeps
         self.lengthscale = lengthscale
-        self.W = W
+        self.W = W_init
         self.key = key
-        self.dotkron = jit(dotkron)
+        self.batch_size = batch_size
+        self.dotkron = jit(get_dotkron(batch_size=batch_size))
         self.features = jit(partial(features, M=M, R=R, lengthscale=lengthscale, **kwargs))
-        self.fit = jit(partial(self.fit, **kwargs))
+        self._fit_w = jit(partial(self._fit_w))
         self.predict = jit(partial(self.predict, **kwargs))
-
-    def fit(
-        self,
-        x,
-        y,
-        **kwargs,
-    ):
-        """
-        Args:
-            x: data
-            y: labels
-
-        Returns:
-            weights: device array
-        """
-
-        N,D = x.shape
-        if self.W is None:
-            self.W = random.normal(self.key, shape=(D, self.M, self.R))
-            self.W /= jnp.linalg.norm(self.W, axis=(1, 2), keepdims=True)
-        
-        reg = jnp.ones((self.R, self.R))
-        self._init_reg = jit(partial(self._init_reg, W=self.W)) #TODO: check the memory footprint of partially filling W
-        reg = fori_loop(0, D, self.init_reg, init_val=reg)
-        
-        self.init_matd = jit(partial(self._init_matd, W=self.W, X=x)) #TODO: check the memory footprint of partially
-        # filling W and x
-        Matd = jnp.ones((N, self.R))
-        Matd = fori_loop(0, D, self.init_matd, init_val=Matd)
-
-        self.fit_step = jit(partial(self._fit_step, X=x, y=y))
-        self.sweep = jit(partial(self._sweep, D=D))
-            
-        (Matd, self.W, reg) = fori_loop(
-            0, self.numberSweeps, self.sweep, init_val=(Matd, self.W, reg)
-        )
-        
-        return self
     
     def _init_reg(self, d, reg, W): # TODO: forloop is not necessary, should be able to do this with linalg
         """
@@ -136,7 +100,7 @@ class TensorizedKernelMachine(object):
         Returns:
             jax.numpy.ndarray: The final value obtained after applying `fit_step` for each factor matrix.
         """
-        return fori_loop(0, D, self.fit_step, init_val=value)
+        return fori_loop(0, D, self._fit_step, init_val=value)
     
     def _fit_step(self, d, value, X, y):
         """
@@ -153,7 +117,6 @@ class TensorizedKernelMachine(object):
             Tuple[jnp.ndarray, jnp.ndarray, float]: A tuple containing the updated feature tensor Matd,
                 the updated weight tensor W, and the updated regularization parameter reg.
         """
-    def _fit_step(self, d, value, X, y):
         (Matd, W, reg) = value # TODO: jit(partial()) this
         Mati = self.features(X[:,d])     # compute phi(x_d)                          
         Matd /= jnp.dot(Mati, W[d])     # undoing the d-th element from Matd (contraction of all cores)
@@ -164,21 +127,76 @@ class TensorizedKernelMachine(object):
         # check if multiplications with 0 need to be avoided
         
         w_d = jnp.linalg.solve((CC + regularization), Cy)         # solve systems of equation, least squares
-        W = W.at[d].set(w_d.reshape((self.M, self.R)) )
+        W = W.at[d].set(w_d.reshape((self.M, self.R), order='F') )
         reg *= jnp.dot(W[d].T, W[d])
         Matd *= jnp.dot(Mati, W[d])
 
         return (Matd, W, reg)
+    
+    def _fit_w(self, x, y):
+        """
+        Fit the model to the data. Function outputs the weights of the model, such that jit can be used.
 
-    def predict(
+        Args:
+            x (jnp.ndarray): The input data matrix of shape (n_samples, n_features).
+            y (jnp.ndarray): The target values of shape (n_samples,).
+
+        Returns:
+            jnp.ndarray: The model weights.
+        """
+        N,D = x.shape
+        if self.W is None:
+            self.W = random.normal(self.key, shape=(D, self.M, self.R))
+            self.W /= jnp.linalg.norm(self.W, axis=(1, 2), keepdims=True)
+        
+        reg = jnp.ones((self.R, self.R))
+        self.init_reg = jit(partial(self._init_reg, W=self.W)) #TODO: check the memory footprint of partially filling W
+        reg = fori_loop(0, D, self.init_reg, init_val=reg)
+        
+        self.init_matd = jit(partial(self._init_matd, W=self.W, X=x)) #TODO: check the memory footprint of partially
+        # filling W and x
+        Matd = jnp.ones((N, self.R))
+        Matd = fori_loop(0, D, self.init_matd, init_val=Matd)
+
+        self._fit_step = jit(partial(self._fit_step, X=x, y=y))
+        self._sweep = jit(partial(self._sweep, D=D))
+            
+        (Matd, self.W, reg) = fori_loop(
+            0, self.numberSweeps, self._sweep, init_val=(Matd, self.W, reg)
+        )
+        
+        return self.W
+    
+    def fit(
         self,
-        X,
+        x,
+        y,
+        **kwargs,
+    ):
+        """
+        Fit the model to the data. 
+
+        Args:
+            x (jnp.ndarray): The input data matrix of shape (n_samples, n_features).
+            y (jnp.ndarray): The target values of shape (n_samples,).
+
+        Returns:
+            self: The fitted model.
+        """
+
+        self.W = self._fit_w(x=x, y=y)
+        
+        return self
+
+    def decision_function(
+        self,
+        x,
         *args,
         **kwargs,
     ):
         """
         Args:
-            X: input data (device array)
+            x: input data (device array)
             W: weights (device array)
         Returns:
             device array with prediction scores for all classes (N,C)
@@ -187,4 +205,22 @@ class TensorizedKernelMachine(object):
         """
         return vmap(
             lambda x,y :jnp.dot(self.features(x),y), (1,0),
-        )(X, self.W).prod(0).sum(1)
+        )(x, self.W).prod(0).sum(1)
+        
+    
+    def predict(
+        self,
+        x,
+        *args,
+        **kwargs,
+    ):
+        """
+        Args:
+            x: input data (device array)
+            W: weights (device array)
+        Returns:
+            device array with prediction scores for all classes (N,C)
+                where N is the number of observations 
+                and C is the number of classes
+        """
+        return jnp.sign(self.decision_function(x))
