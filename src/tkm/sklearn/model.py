@@ -31,7 +31,7 @@ class TKRC(TensorizedKernelMachine, ClassifierMixin):
         "M": [Interval(Real, 1, None, closed="left")],
         "W_init": [Interval(Real, None, None, closed="neither")],
         "l": [Interval(Real, 0, None, closed="left")],
-        "numberSweeps": [Interval(Real, 1, None, closed="left")],
+        "num_sweeps": [Interval(Real, 1, None, closed="left")],
         "lengthscale": [Interval(Real, 0, None, closed="left")],
         "R": [Interval(Real, 1, None, closed="left")],
         "key": ["random state"],
@@ -45,7 +45,7 @@ class TKRC(TensorizedKernelMachine, ClassifierMixin):
         R: int = 10,
         lengthscale: float = 0.5,
         l: float = 1e-5,
-        numberSweeps: int = 10,
+        num_sweeps: int = 10,
         key=random.PRNGKey(0),
         W_init=None,
         batch_size=None,
@@ -61,17 +61,17 @@ class TKRC(TensorizedKernelMachine, ClassifierMixin):
             get_dotkron: function used for rowwise kronnecker product
             batch_size: if is not None batched_dotkron will be used
             l: peanalty term of regularisation (denoted by lambda)
-            numberSweeps: number of ALS sweeps, 1 -> D -> 1 (not including last one)
+            num_sweeps: number of ALS sweeps, 1 -> D -> 1 (not including last one)
                 1 and D are covered once
                 middle is covered twice
                 alternative is doing linear pas 1,...,D (not in this code)
             W: device array of weight, used to bypass random init
         """
 
-        super().__init__(features, M, R, lengthscale, l, numberSweeps, key, W_init, batch_size, **kwargs)
+        super().__init__(features, M, R, lengthscale, l, num_sweeps, key, W_init, batch_size, **kwargs)
             
     def fit(self, x, y, **kwargs):
-        super()._jit_funcs(**kwargs)
+        super()._jit_fit_funs(**kwargs)
         check_array(x)
         self.classes_, y = np.unique(y, return_inverse=True)
         x = jnp.asarray(x)
@@ -98,7 +98,7 @@ class TKRR(TensorizedKernelMachine, RegressorMixin):
         R: int = 10,
         lengthscale: float = 0.5,
         l: float = 1e-5,
-        numberSweeps: int = 10,
+        num_sweeps: int = 10,
         key=random.PRNGKey(0),
         W_init=None,
         batch_size=None,
@@ -113,13 +113,13 @@ class TKRR(TensorizedKernelMachine, RegressorMixin):
             get_dotkron: function used for rowwise kronnecker product
             batch_size: if is not None batched_dotkron will be used
             l: peanalty term of regularisation (denoted by lambda)
-            numberSweeps: number of ALS sweeps, 1 -> D -> 1 (not including last one)
+            num_sweeps: number of ALS sweeps, 1 -> D -> 1 (not including last one)
                 1 and D are covered once
                 middle is covered twice
                 alternative is doing linear pas 1,...,D (not in this code)
             W: device array of weight, used to bypass random init
         """
-        super().__init__(features, M, R, lengthscale, l, numberSweeps, key, W_init, batch_size, **kwargs)
+        super().__init__(features, M, R, lengthscale, l, num_sweeps, key, W_init, batch_size, **kwargs)
             
     def fit(self, x, y):
         
