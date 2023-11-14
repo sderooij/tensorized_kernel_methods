@@ -20,12 +20,12 @@ def dotkron(a, b):
 
     # TODO jax improvement for loops
     # TODO does python provide efficient kron() for vectors
-    return jnp.vstack([jnp.kron(b[k, :], a[k,:]) for k in jnp.arange(b.shape[0])])
+    return jnp.vstack([jnp.kron(b[k, :], a[k,:]) for k in jnp.arange(b.shape[0])])  # shift a and b due to big-endian ordering
 
 
 @jit
 def vmap_dotkron(a,b):
-    return vmap(jnp.kron)(b, a)
+    return vmap(jnp.kron)(b, a) # shift a and b due to big-endian ordering
 
 
 def vmap_dotkron_contracted(a, b, y): # TODO: check y
@@ -38,7 +38,7 @@ def batched_dotkron(A,B,y,batch_size=10000, **kwargs):
     CC = jnp.zeros((DA*DB,DA*DB))
     Cy = jnp.zeros((DA*DB,1))
     for n in range(0,N,batch_size): # TODO fori jax loop
-        idx = min(n+batch_size-1,N)
+        idx = min(n+batch_size,N)
         temp = vmap_dotkron(A[n:idx,:], B[n:idx,:]) # repmat(A(n:idx,:),1,DB)*kron(B(n:idx,:), ones(1, DA))
         CC += temp.T @ temp
         Cy += temp.T @ y[n:idx,:]

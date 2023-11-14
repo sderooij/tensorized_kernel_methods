@@ -40,7 +40,7 @@ class TKRC(TensorizedKernelMachine, ClassifierMixin):
     }
     def __init__(
         self, 
-        features=polynomial,
+        features='poly',
         M: int = 8,
         R: int = 10,
         lengthscale: float = 0.5,
@@ -71,6 +71,7 @@ class TKRC(TensorizedKernelMachine, ClassifierMixin):
         super().__init__(features, M, R, lengthscale, l, numberSweeps, key, W_init, batch_size, **kwargs)
             
     def fit(self, x, y, **kwargs):
+        super()._jit_funcs(**kwargs)
         check_array(x)
         self.classes_, y = np.unique(y, return_inverse=True)
         x = jnp.asarray(x)
