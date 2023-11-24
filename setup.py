@@ -5,7 +5,7 @@ base_requirements = [
 
 cpu_requirements = [
     f'jax[cpu]',
-    f'sklearn',
+    f'scikit-learn',
 ]
 
 gpu_requirements = [
@@ -15,7 +15,7 @@ gpu_requirements = [
 dev_requirements = [
     f'jupyterlab',
     f'pandas',
-    f'sklearn',
+    f'scikit-learn',
 ]
 
 setup(

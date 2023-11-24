@@ -3,6 +3,7 @@ from jax import jit
 from jax import vmap
 from functools import partial
 
+
 # @jit
 def dotkron(a, b):
     """
@@ -31,6 +32,7 @@ def vmap_dotkron(a,b):
 def vmap_dotkron_contracted(a, b, y): # TODO: check y
     temp = vmap_dotkron(a,b)
     return temp.T @ temp, temp.T @ y
+
 
 def batched_dotkron(A,B,y,batch_size=10000, **kwargs):
     N,DA = A.shape

@@ -26,6 +26,7 @@ from typing import Any, List, Optional, Text, Type, Union, Dict, Sequence
 
 from ..model import TensorizedKernelMachine
 
+
 class TKRC(TensorizedKernelMachine, ClassifierMixin):
     _parameter_contraints: Dict[str, Dict[str, Any]] = {
         "M": [Interval(Real, 1, None, closed="left")],
@@ -38,6 +39,7 @@ class TKRC(TensorizedKernelMachine, ClassifierMixin):
         "batch_size": [Interval(Real, 1, None, closed="left")],
         # "class_weight": [StrOptions({"balanced"}), dict, None],
     }
+
     def __init__(
         self, 
         features='poly',
